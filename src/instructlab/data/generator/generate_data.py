@@ -45,7 +45,8 @@ Here are the requirements:
 8. Not all instructions require input. For example, when an instruction asks about some general information, "what is the highest peak in the world", it is not necessary to provide a specific context. In this case, we simply put "<noinput>" in the input field.
 9. The output should be an appropriate response to the instruction and the input. Make sure the output is less than 100 words.
 {% else -%}
-7. The output should be an appropriate response to the input and the instruction. Long outputs are preferable.
+7. The instructions should be related to the input document. 
+8. The output should be an appropriate response to the input and the instruction. Long outputs are preferable. If there is no appropriate output based on input document, return Not Found.
 {% endif %}
 
 {% if not document -%}
@@ -167,7 +168,7 @@ def encode_prompt(prompt_instructions, prompt):
         prompt += f"** Input\n{prompt_input}\n"
         prompt += f"** Output\n{prompt_output}\n"
     prompt += f"* Task {idx + 2}\n"
-    return prompt
+    return prompt, document
 
 
 def writeline2file(logfile, line):
@@ -275,6 +276,7 @@ def get_instructions_from_model(
     tls_client_passwd,
 ):
     batch_inputs = []
+    batch_document_chunks = []
     for _ in range(request_batch_size):
         # only sampling from the seed tasks
         try:
@@ -287,8 +289,9 @@ def get_instructions_from_model(
                 f"yaml is formatted correctly, and there is enough "
                 f"new data({num_prompt_instructions}+ Q&A))"
             ) from exc
-        prompt = encode_prompt(prompt_instructions, prompt_template)
+        prompt, document_chunks = encode_prompt(prompt_instructions, prompt_template)
         batch_inputs.append(prompt)
+        batch_document_chunks.append(document_chunks)
     decoding_args = generateutils.OpenAIDecodingArguments(
         temperature=temperature,
         n=1,
@@ -332,7 +335,7 @@ def get_instructions_from_model(
 
     post_process_start = time.time()
     instruction_data = []
-    for result in results:
+    for result, document_chunks in zip(results, batch_document_chunks):
         new_instructions, discarded = post_process_gpt3_response(
             num_prompt_instructions, result, output_file_discarded
         )
@@ -341,7 +344,7 @@ def get_instructions_from_model(
         for new_ins in new_instructions:
             new_ins["taxonomy_path"] = prompt_ins_0["taxonomy_path"]
             new_ins["task_description"] = prompt_ins_0["task_description"]
-            new_ins["document"] = prompt_ins_0["document"]
+            new_ins["document"] = document_chunks
         instruction_data += new_instructions
 
     post_process_duration = time.time() - post_process_start
