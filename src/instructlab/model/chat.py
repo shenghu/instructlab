@@ -112,12 +112,6 @@ PROMPT_PREFIX = ">>> "
     help="Custom URL endpoint for OpenAI-compatible API. Defaults to the `ilab model serve` endpoint.",
 )
 @click.option(
-    "--api-key",
-    type=click.STRING,
-    default=cfg.DEFAULT_API_KEY,  # Note: do not expose default API key
-    help="API key for API endpoint. [default: config.DEFAULT_API_KEY]",
-)
-@click.option(
     "--tls-insecure",
     is_flag=True,
     help="Disable TLS verification.",
