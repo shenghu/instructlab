@@ -26,6 +26,7 @@ import openai
 from instructlab import client as ilabclient
 from instructlab import configuration as cfg
 from instructlab import utils
+from instructlab.client import ClientException, list_models
 
 # Local
 from ..utils import get_sysprompt, http_client
